@@ -1,0 +1,13 @@
+# 1. Ignore everything in the entire project
+/*
+
+# 2. Prevent Git from ignoring subdirectories (needed to find files inside folders)
+!/**/
+
+# 3. Always track the .gitignore file itself
+!.gitignore
+
+# 4. Explicitly whitelist the exact files or extensions you WANT to track
+!index.html
+!src/
+!src/**
