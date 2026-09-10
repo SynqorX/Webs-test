@@ -9,5 +9,5 @@
 
 # 4. Explicitly whitelist the exact files or extensions you WANT to track
 !index.html
-!src/
-!src/**
+!api.js
+!gemini-widget.js

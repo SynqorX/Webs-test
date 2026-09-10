@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Workspace</title>
+
+  <!-- Markdown parser & Code highlighter -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <style>
+    :root {
+      --bg-sidebar: #171717;
+      --bg-main: #212121;
+      --bg-bubble: #2f2f2f;
+      --border-subtle: #333333;
+      --text-main: #ececec;
+      --text-muted: #b4b4b4;
+      --input-box: #2f2f2f;
+      --accent: #10a37f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 260px;
+      background-color: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-subtle);
+      padding: 12px;
+    }
+
+    .new-chat-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .new-chat-btn:hover { background-color: #262626; }
+
+    .history-list {
+      flex: 1;
+      margin-top: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item.active {
+      background-color: #262626;
+      color: var(--text-main);
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Main Chat */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 0;
+      scroll-behavior: smooth;
+    }
+
+    .message-row {
+      display: flex;
+      justify-content: center;
+      padding: 16px 20px;
+      width: 100%;
+    }
+
+    .message-content {
+      max-width: 760px;
+      width: 100%;
+      display: flex;
+      gap: 16px;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .ai-avatar { background-color: var(--accent); color: white; }
+
+    .bubble-user {
+      background-color: var(--bg-bubble);
+      padding: 10px 16px;
+      border-radius: 16px;
+      border-top-right-radius: 4px;
+      max-width: fit-content;
+      margin-left: auto;
+      white-space: pre-wrap;
+    }
+
+    .bubble-ai { flex: 1; word-break: break-word; }
+    .bubble-ai p { margin-bottom: 12px; }
+    .bubble-ai p:last-child { margin-bottom: 0; }
+    .bubble-ai code {
+      font-family: monospace;
+      background: #111;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .bubble-ai pre code {
+      padding: 12px;
+      display: block;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 6px;
+      height: 14px;
+      background-color: var(--text-main);
+      animation: blink 0.8s infinite;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    /* Input Bar */
+    #input-area {
+      padding: 0 20px 24px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .input-wrapper {
+      max-width: 760px;
+      width: 100%;
+      background: var(--input-box);
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: flex-end;
+      padding: 10px 14px;
+    }
+
+    .input-wrapper:focus-within { border-color: #555; }
+
+    #userInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      max-height: 200px;
+      height: 24px;
+      line-height: 24px;
+    }
+
+    #sendBtn {
+      background: var(--text-main);
+      color: #000;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    #sendBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #sendBtn svg { width: 16px; height: 16px; fill: #000; }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <button class="new-chat-btn" onclick="startNewChat()"><span>+</span> New chat</button>
+    <div class="history-list">
+      <div class="history-item active">Current Session</div>
+    </div>
+    <div class="sidebar-footer">
+      <span>gemini-3.6-flash</span>
+      <span>AI Studio</span>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="chat-container">
+      <div class="message-row">
+        <div class="message-content">
+          <div class="avatar ai-avatar">AI</div>
+          <div class="bubble-ai"><p>How can I help you today?</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div class="input-wrapper">
+        <textarea id="userInput" rows="1" placeholder="Message Gemini..."></textarea>
+        <button id="sendBtn" onclick="submitMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Load API key locally (bypasses CORS restrictions on file://) -->
+  <script src="./api.js"></script>
+
+  <!-- 2. Load the standalone Gemini engine -->
+  <script src="./gemini-widget.js"></script>
+
+  <!-- 3. UI logic that delegates to GeminiClient -->
+  <script>
+    const chatContainer = document.getElementById("chat-container");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    marked.setOptions({
+      highlight: function(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+          return hljs.highlight(code, { language: lang }).value;
+        }
+        return hljs.highlightAuto(code).value;
+      },
+      breaks: true
+    });
+
+    userInput.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 200) + "px";
+      sendBtn.disabled = this.value.trim() === "";
+    });
+
+    userInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitMessage();
+      }
+    });
+
+    async function submitMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      // Solution 1 Guard: Ensure dependencies exist before running
+      if (!window.GEMINI_API_KEY) {
+        alert("Error: api.js not found or window.GEMINI_API_KEY is not defined. Create api.js in the same directory.");
+        return;
+      }
+      if (!window.GeminiClient || typeof window.GeminiClient.ask !== "function") {
+        alert("Error: gemini-widget.js failed to load. Check that gemini-widget.js is in the same directory.");
+        return;
+      }
+
+      renderUserMessage(text);
+
+      userInput.value = "";
+      userInput.style.height = "24px";
+      userInput.disabled = true;
+      sendBtn.disabled = true;
+
+      const aiNode = renderLoadingBubble();
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      try {
+        // Delegate call directly to gemini-widget.js
+        const replyText = await window.GeminiClient.ask(text);
+        aiNode.innerHTML = marked.parse(replyText);
+      } catch (err) {
+        aiNode.innerHTML = `<span style="color: #ef4444;"><b>Error:</b> ${escapeHtml(err.message)}</span>`;
+      } finally {
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        userInput.focus();
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
+
+    function renderUserMessage(text) {
+      const row = document.createElement("div");
+      row.className = "message-row";
+      row.innerHTML = `
+        <div class="message-content" style="justify-content: flex-end;">
+          <div class="bubble-user">${escapeHtml(text)}</div>
+        </div>
+      `;
+      chatContainer.appendChild(row);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function renderLoadingBubble() {
+      const row = document.createElement("div");
+      row.className = "message-row";
+      row.innerHTML = `
+        <div class="message-content">
+          <div class="avatar ai-avatar">AI</div>
+          <div class="bubble-ai"><span class="typing-cursor"></span></div>
+        </div>
+      `;
+      chatContainer.appendChild(row);
+      return row.querySelector(".bubble-ai");
+    }
+
+    function startNewChat() {
+      if (window.GeminiClient) {
+        window.GeminiClient.clearHistory();
+      }
+      chatContainer.innerHTML = `
+        <div class="message-row">
+          <div class="message-content">
+            <div class="avatar ai-avatar">AI</div>
+            <div class="bubble-ai"><p>How can I help you today?</p></div>
+          </div>
+        </div>
+      `;
+      userInput.value = "";
+      userInput.focus();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
